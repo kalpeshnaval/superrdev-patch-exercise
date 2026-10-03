@@ -2,9 +2,9 @@
 
 ## Summary of changes
 
-Every bug below was reproduced first (curl / browser), then re-checked after the fix.
+Each bug was reproduced (curl/browser) before and re-checked after fixing.
 
-1. **Search SQL operator precedence** (`TaskRepository`, `db/queries`, `db/oracle`): `AND` binds tighter than `OR`, so any description match skipped both `archived = FALSE` and the status filter. Archived tasks leaked into results and filters were ignored. Added parentheses.
+1. **Search SQL operator precedence** (`TaskRepository`, `db/queries`, `db/oracle`): `AND` binds tighter than `OR`, so a description match bypassed `archived = FALSE` and the status filter. Added parentheses.
 2. **Artificial 0–1 s `Thread.sleep`** for short/blank queries in `TaskController`: removed (1.0 s → ~8 ms).
 3. **Invalid `status` → 500**: now 400 with the allowed values.
 4. **`page=0` / negative `pageSize` → 500** (`subList` out of bounds): clamped, `pageSize` capped at 100.
@@ -23,13 +23,12 @@ Every bug below was reproduced first (curl / browser), then re-checked after the
 
 ## Not changed
 
-- No auth / write endpoints. That's out of scope for a patch.
-- Wildcard `LIKE '%term%'` can't use indexes. That's fine at this size; full-text search later.
+- Wildcard `LIKE '%term%'` can't use indexes. Fine at this size.
 - Did not add a test suite (timebox); verification was scripted curl + Playwright.
 
 ## Biggest remaining risk
 
-No automated tests: the precedence bug existed in three copies of the same query and nothing caught it. Duplicated query logic across Java and PL/SQL will drift again.
+No automated tests. The precedence bug lived in three copies of one query; duplicated Java/PL-SQL logic will drift again.
 
 ## Tools / AI used
 
