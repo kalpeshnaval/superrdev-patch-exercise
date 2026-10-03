@@ -36,17 +36,56 @@ body {
   margin-bottom: 1rem;
 }
 
-.search-input {
+.search-wrapper {
+  position: relative;
   flex: 1;
-  padding: 0.5rem 0.75rem;
+  min-width: 0;
+}
+
+.search-input {
+  width: 100%;
+  padding: 0.5rem 2rem 0.5rem 0.75rem;
   border: 1px solid #ddd;
   border-radius: 4px;
   font-size: 0.875rem;
 }
 
-.search-input:focus {
+.search-input:focus,
+.status-filter:focus {
   outline: none;
-  border-color: #999;
+  border-color: #1565c0;
+  box-shadow: 0 0 0 2px rgba(21, 101, 192, 0.15);
+}
+
+.search-clear {
+  position: absolute;
+  right: 0.4rem;
+  top: 50%;
+  transform: translateY(-50%);
+  border: none;
+  background: none;
+  color: #888;
+  font-size: 1.1rem;
+  line-height: 1;
+  padding: 0.2rem 0.35rem;
+  cursor: pointer;
+}
+
+.search-clear:hover {
+  color: #333;
+}
+
+.result-summary {
+  min-height: 1.25rem;
+  margin-bottom: 0.5rem;
+  font-size: 0.8rem;
+  color: #888;
+}
+
+.table-wrapper {
+  overflow-x: auto;
+  border-radius: 6px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
 }
 
 .status-filter {
@@ -61,9 +100,19 @@ body {
   width: 100%;
   border-collapse: collapse;
   background: white;
-  border-radius: 6px;
-  overflow: hidden;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  transition: opacity 0.15s;
+}
+
+.task-table.is-loading {
+  opacity: 0.5;
+}
+
+.task-table tbody tr:hover {
+  background: #fafcff;
+}
+
+.nowrap {
+  white-space: nowrap;
 }
 
 .task-table th {
@@ -105,6 +154,7 @@ body {
   font-size: 0.7rem;
   font-weight: 500;
   text-transform: uppercase;
+  white-space: nowrap;
 }
 
 .status-badge.open {
@@ -161,4 +211,19 @@ body {
 .pagination button:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+@media (max-width: 480px) {
+  .controls {
+    flex-direction: column;
+  }
+
+  .task-table {
+    min-width: 640px;
+  }
+
+  .task-table th,
+  .task-table td {
+    padding: 0.6rem 0.6rem;
+  }
 }

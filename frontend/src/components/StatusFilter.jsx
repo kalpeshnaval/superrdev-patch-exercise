@@ -1,10 +1,23 @@
+export const STATUS_LABELS = {
+  OPEN: 'Open',
+  IN_PROGRESS: 'In Progress',
+  DONE: 'Done',
+};
+
 export default function StatusFilter({ value, onChange }) {
   return (
-    <select className="status-filter" value={value} onChange={(e) => onChange(e.target.value)}>
+    <select
+      className="status-filter"
+      aria-label="Filter by status"
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+    >
       <option value="">All statuses</option>
-      <option value="OPEN">Open</option>
-      <option value="IN_PROGRESS">In Progress</option>
-      <option value="DONE">Done</option>
+      {Object.entries(STATUS_LABELS).map(([status, label]) => (
+        <option key={status} value={status}>
+          {label}
+        </option>
+      ))}
     </select>
   );
 }
