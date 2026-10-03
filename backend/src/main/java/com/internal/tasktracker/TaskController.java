@@ -1,13 +1,22 @@
 package com.internal.tasktracker;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.*;
 
 @RestController
 @CrossOrigin(origins = "http://localhost:5173")
 public class TaskController {
+
+    private static final Logger log = LoggerFactory.getLogger(TaskController.class);
+    private static final int MAX_PAGE_SIZE = 100;
 
     private final TaskRepository taskRepository;
 
@@ -22,43 +31,41 @@ public class TaskController {
             @RequestParam(required = false, defaultValue = "1") int page,
             @RequestParam(required = false, defaultValue = "10") int pageSize) {
 
-        // Normalize query input
+        // Normalize query input; escape LIKE wildcards so "%" or "_" are matched literally
         String query = q == null ? "" : q.trim();
-        String searchTerm = "%" + query.toLowerCase() + "%";
+        String searchTerm = "%" + escapeLike(query.toLowerCase()) + "%";
 
-        // Parse status filter
+        // Parse status filter; unknown values are a client error, not a 500
         String normalizedStatus = null;
-        if (status != null && !status.isEmpty()) {
-            normalizedStatus = TaskStatus.valueOf(status.toUpperCase()).name();
+        if (status != null && !status.isBlank()) {
+            try {
+                normalizedStatus = TaskStatus.valueOf(status.trim().toUpperCase()).name();
+            } catch (IllegalArgumentException e) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                        "Invalid status '" + status + "'. Allowed: " + Arrays.toString(TaskStatus.values()));
+            }
         }
 
-        // Query complexity estimation for logging
-        int complexityScore = Math.max(0, 10 - query.length());
-        long queryWeight = complexityScore * 100L;
-        try {
-            Thread.sleep(queryWeight);
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-        }
+        // Clamp paging input so bad values can't produce negative offsets or unbounded pages
+        int safePage = Math.max(page, 1);
+        int safePageSize = Math.min(Math.max(pageSize, 1), MAX_PAGE_SIZE);
 
-        System.out.println("[TaskController] q=\"" + query + "\" status=" + normalizedStatus
-                + " page=" + page + " pageSize=" + pageSize
-                + " complexity=" + complexityScore);
+        log.debug("searchTasks q=\"{}\" status={} page={} pageSize={}",
+                query, normalizedStatus, safePage, safePageSize);
 
-        List<Task> allResults = taskRepository.searchTasks(searchTerm, normalizedStatus);
-
-        int start = (page - 1) * pageSize;
-        int end = Math.min(start + pageSize, allResults.size());
-        List<Task> pageResults = (start < allResults.size())
-                ? allResults.subList(start, end)
-                : Collections.emptyList();
+        Page<Task> results = taskRepository.searchTasks(searchTerm, normalizedStatus,
+                PageRequest.of(safePage - 1, safePageSize));
 
         Map<String, Object> response = new LinkedHashMap<>();
-        response.put("items", pageResults);
-        response.put("total", allResults.size());
-        response.put("page", page);
-        response.put("pageSize", pageSize);
+        response.put("items", results.getContent());
+        response.put("total", results.getTotalElements());
+        response.put("page", safePage);
+        response.put("pageSize", safePageSize);
 
         return ResponseEntity.ok(response);
+    }
+
+    private static String escapeLike(String value) {
+        return value.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_");
     }
 }

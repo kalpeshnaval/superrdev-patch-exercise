@@ -39,19 +39,23 @@ CREATE OR REPLACE PACKAGE BODY task_search_pkg AS
         p_results     OUT task_cursor,
         p_total_count OUT NUMBER
     ) IS
-        v_term   VARCHAR2(257);
-        v_offset NUMBER;
+        v_term      VARCHAR2(1000);
+        v_offset    NUMBER;
+        v_page      NUMBER := GREATEST(NVL(p_page, 1), 1);
+        v_page_size NUMBER := LEAST(GREATEST(NVL(p_page_size, 10), 1), 100);
     BEGIN
-        v_term   := '%' || LOWER(NVL(p_search_term, '')) || '%';
-        v_offset := (p_page - 1) * p_page_size;
+        -- Escape LIKE wildcards so user input is matched literally
+        v_term   := '%' || REPLACE(REPLACE(REPLACE(LOWER(TRIM(p_search_term)),
+                        '\', '\\'), '%', '\%'), '_', '\_') || '%';
+        v_offset := (v_page - 1) * v_page_size;
 
         -- Total count for pagination metadata
         SELECT COUNT(*)
           INTO p_total_count
           FROM tasks
          WHERE archived = 0
-           AND LOWER(title) LIKE v_term
-            OR LOWER(description) LIKE v_term
+           AND (LOWER(title) LIKE v_term ESCAPE '\'
+                OR LOWER(description) LIKE v_term ESCAPE '\')
            AND (p_status IS NULL OR status = p_status);
 
         -- Paginated results using ROWNUM (pre-12c pattern)
@@ -64,12 +68,12 @@ CREATE OR REPLACE PACKAGE BODY task_search_pkg AS
                                assignee, created_at
                           FROM tasks
                          WHERE archived = 0
-                           AND LOWER(title) LIKE v_term
-                            OR LOWER(description) LIKE v_term
+                           AND (LOWER(title) LIKE v_term ESCAPE '\'
+                                OR LOWER(description) LIKE v_term ESCAPE '\')
                            AND (p_status IS NULL OR status = p_status)
-                         ORDER BY created_at DESC
+                         ORDER BY created_at DESC, id DESC
                     ) t
-                   WHERE ROWNUM <= v_offset + p_page_size
+                   WHERE ROWNUM <= v_offset + v_page_size
               )
              WHERE rn > v_offset;
 
