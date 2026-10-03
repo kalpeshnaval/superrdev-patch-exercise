@@ -2,34 +2,35 @@
 
 ## Summary of changes
 
-Each bug was reproduced (curl/browser) before and re-checked after fixing.
+Each bug was reproduced (curl/browser) before fixing and re-checked after.
 
-1. **Search SQL operator precedence** (`TaskRepository`, `db/queries`, `db/oracle`): `AND` binds tighter than `OR`, so a description match bypassed `archived = FALSE` and the status filter. Added parentheses.
-2. **Artificial 0–1 s `Thread.sleep`** for short/blank queries in `TaskController`: removed (1.0 s → ~8 ms).
-3. **Invalid `status` → 500**: now 400 with the allowed values.
-4. **`page=0` / negative `pageSize` → 500** (`subList` out of bounds): clamped, `pageSize` capped at 100.
-5. **In-memory pagination**: replaced with DB `LIMIT/OFFSET` + `COUNT` via `Pageable`; `id` tie-breaker for stable pages.
-6. **LIKE wildcards** `%`/`_` not escaped: `q=%` matched everything.
-7. **Frontend `useTasks`**: errors left `loading=true` forever (error never shown) and were never cleared. Out-of-order responses could overwrite newer results, now handled with `AbortController`.
-8. **No debounce**: one request per keystroke; added a 300 ms debounce.
-9. **Page not reset** on search/filter change: could strand the user on an empty page 4.
-10. Minor: `System.out` → SLF4J, removed `console.log`, backend error message surfaced in UI.
+1. **Search SQL precedence** (repository + both `db/` files): `AND` binds tighter than `OR`, so description matches bypassed `archived = FALSE` and the status filter. Added parentheses.
+2. **Artificial `Thread.sleep`** (up to 1 s on short queries): removed.
+3. **Invalid `status` → 500**: now 400.
+4. **`page=0` / negative `pageSize` → 500**: clamped; `pageSize` capped at 100.
+5. **In-memory pagination** → DB paging (`Pageable` + count), `id` tie-breaker.
+6. **Unescaped LIKE wildcards**: `q=%` matched everything.
+7. **`useTasks`**: errors left "Loading…" forever and never cleared; stale responses could overwrite newer ones (`AbortController`).
+8. **No debounce / page not reset** on new search or filter.
+9. `archived` made `NOT NULL` (primitive `boolean` in entity).
+
+**Improvements:** 7 backend integration tests (`./mvnw test`), which fail against the original query. UI: rows stay visible while loading, result count, readable statuses, Created column, clear button, labels, mobile layout. `npm audit fix` (7 → 2 vulnerabilities).
 
 ## Assumptions
 
-- Archived tasks should never appear in search.
-- Unknown status is a client error (400), not "ignore the filter".
-- Out-of-range paging is clamped rather than rejected.
+- Archived tasks never appear in search.
+- Unknown status is a client error; out-of-range paging is clamped.
 
 ## Not changed
 
-- Wildcard `LIKE '%term%'` can't use indexes. Fine at this size.
-- Did not add a test suite (timebox); verification was scripted curl + Playwright.
+- Vite 5 → 8 major upgrade (remaining 2 advisories are dev-server only).
+- `LIKE '%term%'` can't use indexes; fine at this size.
+- H2 console and `show-sql` left on (dev setup).
 
 ## Biggest remaining risk
 
-No automated tests. The precedence bug lived in three copies of one query; duplicated Java/PL-SQL logic will drift again.
+Search logic is duplicated across Java and PL/SQL with no shared tests, so they will drift. No auth or frontend tests.
 
 ## Tools / AI used
 
-Claude Code: explored the code, reproduced each bug, drafted the fixes, ran the checks. I reviewed every change and wrote the handwritten notes myself.
+Claude Code explored the code, reproduced bugs, drafted fixes and tests, and ran curl/Playwright checks. I reviewed every change.
