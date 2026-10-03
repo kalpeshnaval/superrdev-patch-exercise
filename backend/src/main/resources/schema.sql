@@ -4,7 +4,7 @@ CREATE TABLE IF NOT EXISTS tasks (
     description VARCHAR(1000),
     status      VARCHAR(20)   NOT NULL,
     priority    VARCHAR(10)   DEFAULT 'MEDIUM',
-    archived    BOOLEAN       DEFAULT FALSE,
+    archived    BOOLEAN       DEFAULT FALSE NOT NULL,
     assignee    VARCHAR(100),
     created_at  TIMESTAMP     DEFAULT CURRENT_TIMESTAMP
 );

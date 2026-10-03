@@ -112,6 +112,15 @@ The app starts on **http://localhost:5173**.
 
 The Vite dev server proxies `/api/*` requests to the backend automatically.
 
+### Running tests
+
+```bash
+cd backend
+./mvnw test
+```
+
+Backend integration tests run against the seeded H2 data (no extra setup).
+
 ---
 
 ## Run instructions
